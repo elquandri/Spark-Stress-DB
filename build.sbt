@@ -9,7 +9,8 @@ libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.4.0" % "provided"
 libraryDependencies += "com.google.guava" % "guava" % "14.0.1"
 libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "3.1.0" exclude("com.google.guava", "guava")
 
-
+libraryDependencies += "com.redislabs" % "spark-redis" % "2.4.0"
+libraryDependencies += "redis.clients" % "jedis" % "3.1.0-m1"
 
 resolvers += "Spark Packages Repo" at "https://dl.bintray.com/spark-packages/maven"
 libraryDependencies += "com.datastax.spark" %% "spark-cassandra-connector" % "2.4.0"
