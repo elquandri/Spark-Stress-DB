@@ -1,18 +1,18 @@
 import org.apache.hadoop.io.Text
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{Row, SparkSession}
-import com.redislabs.provider.redis._
+
 
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
-object SparkStressDB  extends App with Cassandra with MongoDB with Redis{
+object SparkStressDB  extends App with Cassandra with MongoDB with Redis with Kafka {
 
 
   val numRecords = args(0).toLong
   val db = args(1).toString
   val numberOfRecords = sizeStrToNumber(args(0))
 
-  if (db != "Cassandra" && db != "MongoDB" && db !="Redis"){
+  if (db != "Cassandra" && db != "MongoDB" && db !="Redis" && db != "Kafka"){
 
     println("le nom du db est incorrect")
     throwsException("le nom du db est incorrect")
@@ -22,20 +22,25 @@ object SparkStressDB  extends App with Cassandra with MongoDB with Redis{
 
   val conf = new SparkConf()
     .registerKryoClasses(Array(classOf[Text]))
-    .setAppName("SparkGen")
+
 
 
   db match {
 
     case "Cassandra" => conf.set("spark.cassandra.connection.host","172.16.10.11,172.16.10.33,172.16.10.38")
+                            .setAppName("stressCassandra")
     case "MongoDB"   => conf.set("spark.mongodb.input.uri","mongodb://172.16.10.38:27017")
                             .set("spark.mongodb.input.database","stress")
                             .set("spark.mongodb.input.collection","generate")
                             .set("spark.mongodb.output.uri","mongodb://172.16.10.38:27017")
                             .set("spark.mongodb.output.database","stress")
                             .set("spark.mongodb.output.collection","generate")
+                            .setAppName("stressMongoDB")
     case "Redis"     => conf.set("spark.redis.host","172.16.10.11")
                             .set("spark.redis.port","6379")
+                            .setAppName("stressRedis")
+    case "Kafka"     => conf.setAppName("stressKafka")
+                            .set("spark.kryoserializer.buffer.max.mb", "512")
 
   }
 
@@ -44,9 +49,6 @@ object SparkStressDB  extends App with Cassandra with MongoDB with Redis{
     .master("local")
     .config(conf)
     .getOrCreate()
-
-
-
 
 
 
@@ -113,9 +115,10 @@ object SparkStressDB  extends App with Cassandra with MongoDB with Redis{
 
       case "Redis"     => redisStress(dfData,spark)
 
+      case "Kafka"     => kafkaStress(spark,"sstress",dfData, numRecords)
+
     }
 
-   // sc.fromRedisKeyPattern("foo*", 5)
 
   }
   catch{

@@ -20,10 +20,10 @@ trait MongoDB {
     val diff = dfRead.except(data)
 
     if (diff.count()==0){
-      println("sucess")
+      println("Success")
     }
     else {
-      println("insucess")
+      println("Failure")
       println(diff.count())
     }
 

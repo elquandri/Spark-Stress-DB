@@ -21,10 +21,10 @@ trait Cassandra {
     val diff = dfRead.except(dfData)
 
     if (diff.count()==0){
-      println("sucess")
+      println("Success")
     }
     else {
-      println("insucess")
+      println("Failure")
       println(diff.count())
     }
 
