@@ -9,7 +9,7 @@ SparkStressDB is an application to do stress test and database overload (Cassand
 
 # How to use 
 
-- ** Example : **
+- **Example :**
 
 
 
