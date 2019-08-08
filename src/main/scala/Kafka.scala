@@ -1,8 +1,6 @@
 import java.util.Properties
-import kafka.utils.ZkUtils
-import kafka.server.KafkaServer
-import org.apache.spark.sql.types.{BinaryType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 import scala.collection.JavaConverters._
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -12,8 +10,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer
 
 trait Kafka {
 
-  private var zkUtils: ZkUtils = _
-  private var server: KafkaServer = _
+
 
 
   def kafkaWriter(data : DataFrame, topic : String): Unit ={
@@ -115,12 +112,6 @@ trait Kafka {
     )
 
 
-
-  def deleteTopic(topic: String): Unit = {
-    val partitions = zkUtils.getPartitionsForTopics(Seq(topic))(topic).size
-    adminClient.deleteTopics(Collections.singleton(topic))
-    verifyTopicDeletionWithRetries(zkUtils, topic, partitions, List(this.server))
-  }
 
 
 
