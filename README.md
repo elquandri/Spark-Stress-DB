@@ -5,5 +5,5 @@ SparkStressDB is an application to do stress test and database overload (Cassand
 
 | SparkStress  |   Spark        |    Cassandra  | MongoDB    |   Redis    |  Kafka    | 
 |     ---      |     ---        |     ---       |  ---       |   ---      |   ---     |
-| 1.0          | 2.3.x and 2.4.x| >= 2.1        |>= 3.0      | >=4.0      | > 1.1.0   |
+| 1.0          | 2.3.x and 2.4.x| >= 2.1        |>= 3.0      | >=4.0      | > = 1.1.0 |
 
