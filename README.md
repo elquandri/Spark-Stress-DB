@@ -9,4 +9,5 @@ SparkStressDB is an application to do stress test and database overload (Cassand
 
 # How to use 
 
+- Example : 
 ``` spark-submit --class SparkStressDB --master spark://centos-vm-01.localdomain:7077 target/scala-2.11/spark-stress-assembly-0.1.jar 1000000 MongoDB ```
