@@ -1,13 +1,19 @@
-import java.util.concurrent.Executors
-import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
+import java.util.Properties
+import kafka.utils.ZkUtils
+import kafka.server.KafkaServer
 import org.apache.spark.sql.types.{BinaryType, IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
-import java.util.concurrent.TimeUnit.SECONDS
+
+import scala.collection.JavaConverters._
+import org.apache.kafka.clients.consumer.KafkaConsumer
+
 
 
 
 trait Kafka {
 
+  private var zkUtils: ZkUtils = _
+  private var server: KafkaServer = _
 
 
   def kafkaWriter(data : DataFrame, topic : String): Unit ={
@@ -25,74 +31,95 @@ trait Kafka {
 
    kafkaWriter(dataGenerated,topic)
 
-    import spark.implicits._
-
-    var data = spark.createDataset(spark.sparkContext.emptyRDD[(String,String)])
-    var ds1 = spark.createDataFrame(spark.sparkContext.emptyRDD[Row],dfKafkaSchema(List("key","value","topic","partition","offset","timestamp","timestampType")))
-
-       ds1 = spark
-        .readStream
-        .format("kafka")
-        .option("kafka.bootstrap.servers", "172.16.10.45:1025")
-        .option("subscribe", topic)
-        .option("startingOffsets", "earliest")
-        .load()
-
-       data = ds1.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
-        .as[(String, String)]
 
 
-      val query: StreamingQuery = data.writeStream
-        .outputMode("append")
-        .format("console")
-        .start()
+    val props = createProp()
+    val topics = List(topic)
+    val consumer = new KafkaConsumer(props)
 
 
-    Executors.newSingleThreadScheduledExecutor.
-      scheduleWithFixedDelay(queryTerminator(query), size, 60 * 5, SECONDS)
-    spark.streams.resetTerminated
-    query.awaitTermination()
+    try {
+      consumer.subscribe(topics.asJava)
+      var df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row],dfKafkaSchema(List("key","value")))
+      var count = 0
 
-    assert(spark.streams.active.isEmpty)
+      while (count < size) {
+        val records = consumer.poll(100)
+        for (record <- records.asScala) {
+
+          var dd = spark.sparkContext.parallelize(Seq((record.key().toString,record.value().toString)))
+          var dataRow = dd.map(line => Row.fromTuple(line))
+          var drecord = spark.createDataFrame(dataRow,dfKafkaSchema(List("key","value")))
+
+          df = df.union(drecord)
+
+          println("Topic: " + record.topic() +
+            ",Key: " + record.key() +
+            ",Value: " + record.value() +
+            ", Offset: " + record.offset() +
+            ", Partition: " + record.partition())
+
+          count +=1
+        }
+      }
+
+      df.show()
+
+      val diff = df.except(dataGenerated)
+
+      if (diff.count()==0){
+        println("Success")
+      }
+      else {
+        println("Failure")
+        println(diff.count())
+      }
 
 
+    }catch{
+      case e:Exception => e.printStackTrace()
 
-
-    ds1.show()
-    println(ds1.count())
-
-    val diff = ds1.except(dataGenerated)
-
-    if (diff.count()==0){
-      println("Success")
+    }finally {
+      consumer.close()
     }
-    else {
-      println("Failure")
-      println(diff.count())
-    }
+
+
+
+  }
+
+
+  def createProp(): Properties  ={
+
+    val props:Properties = new Properties()
+    props.put("group.id", "test-consumer-group")
+    props.put("bootstrap.servers","172.16.10.45:1025")
+    props.put("key.deserializer",
+      "org.apache.kafka.common.serialization.StringDeserializer")
+    props.put("value.deserializer",
+      "org.apache.kafka.common.serialization.StringDeserializer")
+    props.put("enable.auto.commit", "true")
+    props.put("auto.commit.interval.ms", "1000")
+    props.put("auto.offset.reset", "earliest")
+
+    return props
 
   }
 
   def dfKafkaSchema(columnNames: List[String]): StructType =
     StructType(
       Seq(
-        StructField(name = "key", dataType = BinaryType , nullable = true),
-        StructField(name = "value", dataType = BinaryType, nullable = true),
-        StructField(name = "topic", dataType = StringType, nullable = true),
-        StructField(name = "partition", dataType = IntegerType, nullable = true),
-        StructField(name = "offset", dataType = LongType, nullable = true),
-        StructField(name = "timestamp", dataType = TimestampType, nullable = true),
-        StructField(name = "timestampType", dataType = IntegerType, nullable = true)
+        StructField(name = "key", dataType = StringType , nullable = false),
+        StructField(name = "value", dataType = StringType, nullable = false)
+
       )
     )
 
 
 
-  def queryTerminator(query: StreamingQuery) = new Runnable {
-    def run = {
-      println(s"Stopping streaming query: ${query.id}")
-      query.stop
-    }
+  def deleteTopic(topic: String): Unit = {
+    val partitions = zkUtils.getPartitionsForTopics(Seq(topic))(topic).size
+    adminClient.deleteTopics(Collections.singleton(topic))
+    verifyTopicDeletionWithRetries(zkUtils, topic, partitions, List(this.server))
   }
 
 

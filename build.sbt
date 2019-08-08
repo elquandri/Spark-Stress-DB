@@ -27,7 +27,7 @@ libraryDependencies += "com.datastax.spark" %% "spark-cassandra-connector" % "2.
 libraryDependencies += "org.mongodb.spark" %% "mongo-spark-connector" % "2.4.0"
 
 
-
+libraryDependencies += "org.apache.kafka" %% "kafka" % "2.3.0"
 
 
 
