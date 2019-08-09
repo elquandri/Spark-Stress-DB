@@ -21,3 +21,10 @@ SparkStressDB is an application to do stress test and database overload (Cassand
   - size : *Long type*
   - DB : *you can use (Cassandra, MongoDB, Redis, Kafka)*
   
+  
+  
+ - **Notice:**
+ 
+    - *Before using kafka you should delete a topic stress if exist*
+  
+   ``` ./bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic stress   ```
